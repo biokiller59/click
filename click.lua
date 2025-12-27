@@ -1,23 +1,104 @@
---------------------------------------------------
--- BEAUTIFUL HUB GUI + MOBILE DRAG + FARM TOGGLE
---------------------------------------------------
+-- ANUBIS HUB | FULL READY SCRIPT
 
-local Players = game:GetService("Players")
+--------------------------------------------------
+-- CONFIG
+--------------------------------------------------
+Config = {
+    api = "7a4939b2-37ac-4a92-98d2-b2bacdf36791",
+    service = "Saltink",
+    provider = "Anubis"
+}
+
+--------------------------------------------------
+-- GLOBAL STATES
+--------------------------------------------------
+getgenv().FarmEnabled = false
+getgenv().Started = false
+
+--------------------------------------------------
+-- FARM SYSTEM
+--------------------------------------------------
+local function startFarm()
+    if getgenv().Started then return end
+    getgenv().Started = true
+
+    local Players = game:GetService("Players")
+    local VirtualUser = game:GetService("VirtualUser")
+    local player = Players.LocalPlayer
+    local ITEM_NAME = "Combat"
+
+    -- AUTO EQUIP
+    task.spawn(function()
+        while true do
+            if getgenv().FarmEnabled then
+                local char = player.Character
+                if char then
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    local bp = player:FindFirstChild("Backpack")
+                    if hum and bp and not char:FindFirstChild(ITEM_NAME) then
+                        local tool = bp:FindFirstChild(ITEM_NAME)
+                        if tool then hum:EquipTool(tool) end
+                    end
+                end
+            end
+            task.wait(1)
+        end
+    end)
+
+    -- AUTO CLICK
+    task.spawn(function()
+        while true do
+            if getgenv().FarmEnabled then
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton1(Vector2.new(500,500), workspace.CurrentCamera.CFrame)
+            end
+            task.wait(0.08)
+        end
+    end)
+
+    -- FARM LOOP
+    task.spawn(function()
+        while true do
+            if getgenv().FarmEnabled then
+                local char = player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    -- TITAN
+                    hrp.CFrame = workspace.Bosses.Waiting.Titan.qw.CFrame
+                    task.wait(15)
+
+                    if workspace.RespawnMobs.Titan
+                        and workspace.RespawnMobs.Titan:FindFirstChild("Titan")
+                        and workspace.RespawnMobs.Titan.Titan then
+                        hrp.CFrame = workspace.RespawnMobs.Titan.Titan.CFrame
+                    end
+
+                    task.wait(10)
+
+                    -- MUSCLE
+                    hrp.CFrame = workspace.Bosses.Waiting.Muscle.qw.CFrame
+                    task.wait(25)
+
+                    if workspace.RespawnMobs.Muscle
+                        and workspace.RespawnMobs.Muscle:FindFirstChild("Muscle") then
+                        hrp.CFrame = workspace.RespawnMobs.Muscle.Muscle.CFrame
+                    end
+                end
+            end
+            task.wait(1)
+        end
+    end)
+end
+
+--------------------------------------------------
+-- GUI HUB
+--------------------------------------------------
 local UIS = game:GetService("UserInputService")
-local player = Players.LocalPlayer
-
--- FARM STATE (используется в main)
-getgenv().FarmEnabled = getgenv().FarmEnabled or false
-
---------------------------------------------------
--- GUI
---------------------------------------------------
 local Gui = Instance.new("ScreenGui", game.CoreGui)
-Gui.Name = "AnubisHub"
 Gui.ResetOnSpawn = false
 
 local Frame = Instance.new("Frame", Gui)
-Frame.Size = UDim2.fromOffset(520, 340)
+Frame.Size = UDim2.fromOffset(520, 330)
 Frame.Position = UDim2.fromScale(0.5, 0.5)
 Frame.AnchorPoint = Vector2.new(0.5, 0.5)
 Frame.BackgroundColor3 = Color3.fromRGB(24,24,30)
@@ -25,17 +106,12 @@ Frame.BorderSizePixel = 0
 Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,18)
 
 local Stroke = Instance.new("UIStroke", Frame)
-Stroke.Color = Color3.fromRGB(80,80,110)
-Stroke.Transparency = 0.3
-Stroke.Thickness = 1.2
+Stroke.Color = Color3.fromRGB(90,90,130)
+Stroke.Transparency = 0.35
 
---------------------------------------------------
--- MOBILE + PC DRAG
---------------------------------------------------
+-- DRAG (PC + MOBILE)
 do
-    local dragging = false
-    local dragStart, startPos
-
+    local dragging, dragStart, startPos
     Frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
@@ -44,139 +120,71 @@ do
             startPos = Frame.Position
         end
     end)
-
     UIS.InputChanged:Connect(function(input)
-        if dragging and
-        (input.UserInputType == Enum.UserInputType.MouseMovement
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
             Frame.Position = startPos + UDim2.fromOffset(delta.X, delta.Y)
         end
     end)
-
     UIS.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
+        or input.UserInputType == Enum.UserInputType.Touch) then
             dragging = false
         end
     end)
 end
 
 --------------------------------------------------
--- LEFT TABS
---------------------------------------------------
-local Tabs = Instance.new("Frame", Frame)
-Tabs.Size = UDim2.fromOffset(130, 340)
-Tabs.BackgroundColor3 = Color3.fromRGB(20,20,26)
-Tabs.BorderSizePixel = 0
-Instance.new("UICorner", Tabs).CornerRadius = UDim.new(0,18)
-
-local TabsLayout = Instance.new("UIListLayout", Tabs)
-TabsLayout.Padding = UDim.new(0,10)
-TabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-TabsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-
---------------------------------------------------
 -- CONTENT
 --------------------------------------------------
-local Content = Instance.new("Frame", Frame)
-Content.Position = UDim2.fromOffset(145, 15)
-Content.Size = UDim2.fromOffset(360, 310)
-Content.BackgroundTransparency = 1
-
-local ContentLayout = Instance.new("UIListLayout", Content)
-ContentLayout.Padding = UDim.new(0,10)
-
---------------------------------------------------
--- UI HELPERS
---------------------------------------------------
-local function clear()
-    for _,v in pairs(Content:GetChildren()) do
-        if not v:IsA("UIListLayout") then
-            v:Destroy()
-        end
-    end
-end
+local Layout = Instance.new("UIListLayout", Frame)
+Layout.Padding = UDim.new(0,12)
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Layout.VerticalAlignment = Enum.VerticalAlignment.Center
 
 local function label(text, size)
-    local l = Instance.new("TextLabel", Content)
-    l.Size = UDim2.new(1,0,0,30)
+    local l = Instance.new("TextLabel", Frame)
+    l.Size = UDim2.new(1,-40,0,size)
     l.BackgroundTransparency = 1
     l.Text = text
     l.Font = Enum.Font.GothamBold
-    l.TextSize = size or 16
+    l.TextSize = size
     l.TextColor3 = Color3.new(1,1,1)
-    l.TextXAlignment = Enum.TextXAlignment.Left
 end
 
-local function toggle(text, default, callback)
-    local btn = Instance.new("TextButton", Content)
-    btn.Size = UDim2.new(1,0,0,42)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    btn.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,12)
-
-    local state = default
-    local function refresh()
-        btn.Text = text .. ": " .. (state and "ON" or "OFF")
-        btn.BackgroundColor3 = state
-            and Color3.fromRGB(70,180,90)
-            or Color3.fromRGB(180,70,70)
-    end
-
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        refresh()
-        callback(state)
-    end)
-
-    refresh()
-end
-
-local function tabButton(text)
-    local b = Instance.new("TextButton", Tabs)
-    b.Size = UDim2.new(1,-20,0,44)
+local function button(text, color)
+    local b = Instance.new("TextButton", Frame)
+    b.Size = UDim2.new(0.85,0,0,44)
     b.Text = text
     b.Font = Enum.Font.GothamBold
     b.TextSize = 14
     b.TextColor3 = Color3.new(1,1,1)
-    b.BackgroundColor3 = Color3.fromRGB(40,40,55)
+    b.BackgroundColor3 = color
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,12)
     return b
 end
 
 --------------------------------------------------
--- TABS
+-- UI ELEMENTS
 --------------------------------------------------
-local MainTab = tabButton("Main")
-local FarmTab = tabButton("Farm")
-local MiscTab = tabButton("Misc")
+label("ANUBIS HUB", 22)
+label("Auto Farm System", 14)
 
---------------------------------------------------
--- TAB CONTENTS
---------------------------------------------------
-MainTab.MouseButton1Click:Connect(function()
-    clear()
-    label("ANUBIS HUB", 20)
-    label("Status: Loaded")
-    label("Version: 1.0")
+local FarmBtn = button("AUTO FARM: OFF", Color3.fromRGB(170,70,70))
+
+FarmBtn.MouseButton1Click:Connect(function()
+    getgenv().FarmEnabled = not getgenv().FarmEnabled
+    if getgenv().FarmEnabled then
+        FarmBtn.Text = "AUTO FARM: ON"
+        FarmBtn.BackgroundColor3 = Color3.fromRGB(70,180,90)
+    else
+        FarmBtn.Text = "AUTO FARM: OFF"
+        FarmBtn.BackgroundColor3 = Color3.fromRGB(170,70,70)
+    end
 end)
 
-FarmTab.MouseButton1Click:Connect(function()
-    clear()
-    label("Farm Settings", 18)
-
-    toggle("Auto Farm", getgenv().FarmEnabled, function(v)
-        getgenv().FarmEnabled = v
-    end)
-end)
-
-MiscTab.MouseButton1Click:Connect(function()
-    clear()
-    label("Misc", 18)
-    label("More features soon...")
-end)
-
--- DEFAULT TAB
-MainTab:MouseButton1Click()
+--------------------------------------------------
+-- START FARM SYSTEM
+--------------------------------------------------
+startFarm()
