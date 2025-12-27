@@ -1,178 +1,140 @@
--- ANUBIS HUB | FULL READY SCRIPT
+-- ANUBIS HUB | FARM FIXED 100%
 
 --------------------------------------------------
--- CONFIG
---------------------------------------------------
-Config = {
-    api = "7a4939b2-37ac-4a92-98d2-b2bacdf36791",
-    service = "Saltink",
-    provider = "Anubis"
-}
-
---------------------------------------------------
--- GLOBAL STATES
+-- GLOBAL STATE
 --------------------------------------------------
 getgenv().FarmEnabled = false
-getgenv().Started = false
 
 --------------------------------------------------
--- FARM SYSTEM
+-- SERVICES
 --------------------------------------------------
-local function startFarm()
-    if getgenv().Started then return end
-    getgenv().Started = true
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
-    local Players = game:GetService("Players")
-    local VirtualUser = game:GetService("VirtualUser")
-    local player = Players.LocalPlayer
-    local ITEM_NAME = "Combat"
+local player = Players.LocalPlayer
 
-    -- AUTO EQUIP
-    task.spawn(function()
-        while true do
-            if getgenv().FarmEnabled then
-                local char = player.Character
-                if char then
-                    local hum = char:FindFirstChildOfClass("Humanoid")
-                    local bp = player:FindFirstChild("Backpack")
-                    if hum and bp and not char:FindFirstChild(ITEM_NAME) then
-                        local tool = bp:FindFirstChild(ITEM_NAME)
-                        if tool then hum:EquipTool(tool) end
-                    end
-                end
-            end
-            task.wait(1)
-        end
-    end)
-
-    -- AUTO CLICK
-    task.spawn(function()
-        while true do
-            if getgenv().FarmEnabled then
-                VirtualUser:CaptureController()
-                VirtualUser:ClickButton1(Vector2.new(500,500), workspace.CurrentCamera.CFrame)
-            end
-            task.wait(0.08)
-        end
-    end)
-
-    -- FARM LOOP
-    task.spawn(function()
-        while true do
-            if getgenv().FarmEnabled then
-                local char = player.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    -- TITAN
-                    hrp.CFrame = workspace.Bosses.Waiting.Titan.qw.CFrame
-                    task.wait(15)
-
-                    if workspace.RespawnMobs.Titan
-                        and workspace.RespawnMobs.Titan:FindFirstChild("Titan")
-                        and workspace.RespawnMobs.Titan.Titan then
-                        hrp.CFrame = workspace.RespawnMobs.Titan.Titan.CFrame
-                    end
-
-                    task.wait(10)
-
-                    -- MUSCLE
-                    hrp.CFrame = workspace.Bosses.Waiting.Muscle.qw.CFrame
-                    task.wait(25)
-
-                    if workspace.RespawnMobs.Muscle
-                        and workspace.RespawnMobs.Muscle:FindFirstChild("Muscle") then
-                        hrp.CFrame = workspace.RespawnMobs.Muscle.Muscle.CFrame
-                    end
-                end
-            end
-            task.wait(1)
-        end
-    end)
+--------------------------------------------------
+-- SAFE CHARACTER GET
+--------------------------------------------------
+local function getChar()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart", 10)
+    return char, hrp
 end
 
 --------------------------------------------------
--- GUI HUB
+-- FARM SYSTEM (STABLE)
 --------------------------------------------------
-local UIS = game:GetService("UserInputService")
+task.spawn(function()
+    while true do
+        if getgenv().FarmEnabled then
+            local char, hrp = getChar()
+            if hrp then
+                -- AUTO CLICK
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton1(Vector2.new(500,500), workspace.CurrentCamera.CFrame)
+
+                -- TITAN WAIT
+                if workspace:FindFirstChild("Bosses") then
+                    hrp.CFrame = workspace.Bosses.Waiting.Titan.qw.CFrame
+                    task.wait(15)
+                end
+
+                -- TITAN SPAWN
+                if workspace:FindFirstChild("RespawnMobs")
+                and workspace.RespawnMobs:FindFirstChild("Titan")
+                and workspace.RespawnMobs.Titan:FindFirstChild("Titan") then
+                    hrp.CFrame = workspace.RespawnMobs.Titan.Titan.CFrame
+                    task.wait(10)
+                end
+
+                -- MUSCLE WAIT
+                hrp.CFrame = workspace.Bosses.Waiting.Muscle.qw.CFrame
+                task.wait(25)
+
+                -- MUSCLE SPAWN
+                if workspace.RespawnMobs:FindFirstChild("Muscle")
+                and workspace.RespawnMobs.Muscle:FindFirstChild("Muscle") then
+                    hrp.CFrame = workspace.RespawnMobs.Muscle.Muscle.CFrame
+                    task.wait(10)
+                end
+            end
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+--------------------------------------------------
+-- GUI
+--------------------------------------------------
 local Gui = Instance.new("ScreenGui", game.CoreGui)
 Gui.ResetOnSpawn = false
 
 local Frame = Instance.new("Frame", Gui)
-Frame.Size = UDim2.fromOffset(520, 330)
+Frame.Size = UDim2.fromOffset(420, 220)
 Frame.Position = UDim2.fromScale(0.5, 0.5)
 Frame.AnchorPoint = Vector2.new(0.5, 0.5)
-Frame.BackgroundColor3 = Color3.fromRGB(24,24,30)
+Frame.BackgroundColor3 = Color3.fromRGB(25,25,32)
 Frame.BorderSizePixel = 0
-Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,18)
-
-local Stroke = Instance.new("UIStroke", Frame)
-Stroke.Color = Color3.fromRGB(90,90,130)
-Stroke.Transparency = 0.35
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,16)
 
 -- DRAG (PC + MOBILE)
 do
-    local dragging, dragStart, startPos
-    Frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = Frame.Position
+    local drag, startPos, dragPos
+    Frame.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then
+            drag = true
+            startPos = i.Position
+            dragPos = Frame.Position
         end
     end)
-    UIS.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            Frame.Position = startPos + UDim2.fromOffset(delta.X, delta.Y)
+    UIS.InputChanged:Connect(function(i)
+        if drag and (i.UserInputType == Enum.UserInputType.MouseMovement
+        or i.UserInputType == Enum.UserInputType.Touch) then
+            local delta = i.Position - startPos
+            Frame.Position = dragPos + UDim2.fromOffset(delta.X, delta.Y)
         end
     end)
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch) then
-            dragging = false
+    UIS.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then
+            drag = false
         end
     end)
 end
 
 --------------------------------------------------
--- CONTENT
+-- UI ELEMENTS
 --------------------------------------------------
 local Layout = Instance.new("UIListLayout", Frame)
 Layout.Padding = UDim.new(0,12)
 Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 Layout.VerticalAlignment = Enum.VerticalAlignment.Center
 
-local function label(text, size)
-    local l = Instance.new("TextLabel", Frame)
-    l.Size = UDim2.new(1,-40,0,size)
-    l.BackgroundTransparency = 1
-    l.Text = text
-    l.Font = Enum.Font.GothamBold
-    l.TextSize = size
-    l.TextColor3 = Color3.new(1,1,1)
-end
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1,-40,0,30)
+Title.BackgroundTransparency = 1
+Title.Text = "ANUBIS AUTO FARM"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 20
+Title.TextColor3 = Color3.new(1,1,1)
 
-local function button(text, color)
-    local b = Instance.new("TextButton", Frame)
-    b.Size = UDim2.new(0.85,0,0,44)
-    b.Text = text
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 14
-    b.TextColor3 = Color3.new(1,1,1)
-    b.BackgroundColor3 = color
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,12)
-    return b
-end
+local FarmBtn = Instance.new("TextButton", Frame)
+FarmBtn.Size = UDim2.new(0.85,0,0,50)
+FarmBtn.Text = "AUTO FARM: OFF"
+FarmBtn.Font = Enum.Font.GothamBold
+FarmBtn.TextSize = 16
+FarmBtn.TextColor3 = Color3.new(1,1,1)
+FarmBtn.BackgroundColor3 = Color3.fromRGB(180,70,70)
+Instance.new("UICorner", FarmBtn).CornerRadius = UDim.new(0,12)
 
 --------------------------------------------------
--- UI ELEMENTS
+-- BUTTON LOGIC
 --------------------------------------------------
-label("ANUBIS HUB", 22)
-label("Auto Farm System", 14)
-
-local FarmBtn = button("AUTO FARM: OFF", Color3.fromRGB(170,70,70))
-
 FarmBtn.MouseButton1Click:Connect(function()
     getgenv().FarmEnabled = not getgenv().FarmEnabled
     if getgenv().FarmEnabled then
@@ -180,11 +142,6 @@ FarmBtn.MouseButton1Click:Connect(function()
         FarmBtn.BackgroundColor3 = Color3.fromRGB(70,180,90)
     else
         FarmBtn.Text = "AUTO FARM: OFF"
-        FarmBtn.BackgroundColor3 = Color3.fromRGB(170,70,70)
+        FarmBtn.BackgroundColor3 = Color3.fromRGB(180,70,70)
     end
 end)
-
---------------------------------------------------
--- START FARM SYSTEM
---------------------------------------------------
-startFarm()
